@@ -27,10 +27,10 @@ impl<'a> VanityWorker<'a> for TronWorker<'a> {
     fn clear_matchers(&mut self) {
         self.matchers.clear();
     }
-    
+
     fn generate_key(&self) -> Vec<KeyGenerationResult> {
         let mnemonic = generate_mnemonic(self.mnemonic_size);
-        let seed = mnemonic_to_seed(&mnemonic, "");
+        let seed = mnemonic_to_seed(&mnemonic, self.passphrase);
         let mut result = Vec::new();
 
         for child_number in 0..self.max_child_number {

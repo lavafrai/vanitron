@@ -1,8 +1,8 @@
 mod vanity;
 
-use regex::{Regex, RegexBuilder};
 use crate::vanity::tron::tron_worker::TronWorker;
 use crate::vanity::vanity_worker::VanityWorker;
+use regex::RegexBuilder;
 
 fn main() {
     let mut vanity_worker: Box<dyn VanityWorker> = Box::new(TronWorker::new(
@@ -27,7 +27,7 @@ fn main() {
     while !done {
         let results = vanity_worker.generate_key();
         for result in results {
-            if (vanity_worker.test(result.address.as_str())) {
+            if vanity_worker.test(result.address.as_str()) {
                 println!("Found matching address: {}", result.address);
                 println!("Mnemonic: {}", result.mnemonic);
                 println!("Derivation Path: {}", result.derivation_path);
