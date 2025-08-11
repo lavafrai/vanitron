@@ -1,0 +1,13 @@
+[package]
+name = "vanitron"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+regex = "1.11"
+bip39 = { version = "2.2", features = ["rand"] }
+tiny-hderive = "0.3"
+secp256k1 = "0.31"
+sha3 = "0.10"
+sha2 = "0.10"
+bs58 = "0.5"
