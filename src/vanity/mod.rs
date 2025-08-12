@@ -1,3 +1,3 @@
 pub mod vanity_worker;
 pub mod tron;
-pub(crate) mod generated_key;
+pub mod generated_key;
