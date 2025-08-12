@@ -7,6 +7,7 @@ pub trait VanityWorker: Send + Sync + 'static {
     fn clear_matchers(&mut self);
     fn has_wallets_found(&self) -> bool;
     fn get_generated_wallets_count(&self) -> u64;
+    fn has_found_wallets(&self) -> bool;
     fn get_found_wallets(&self) -> Vec<KeyGenerationResult>;
     fn start_generation(&self);
     fn stop_generation(&self);

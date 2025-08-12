@@ -1,6 +1,6 @@
 [package]
 name = "vanitron"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [dependencies]
@@ -11,3 +11,5 @@ secp256k1 = "0.31"
 sha3 = "0.10"
 sha2 = "0.10"
 bs58 = "0.5"
+clap = { version = "4.5", features = ["derive"] }
+num_cpus = "1.17"

@@ -42,6 +42,10 @@ impl VanityWorker for TronWorker {
         self.wallets_generated.load(Ordering::SeqCst)
     }
 
+    fn has_found_wallets(&self) -> bool {
+        !self.found_wallets.lock().unwrap().is_empty()
+    }
+
     fn get_found_wallets(&self) -> Vec<KeyGenerationResult> {
         self.found_wallets.lock().unwrap().clone()
     }
@@ -52,7 +56,7 @@ impl VanityWorker for TronWorker {
         for _ in 0..self.threads_count {
             let worker = self_arc.clone();
             thread::spawn(move || {
-                while worker.has_wallets_found() {
+                while worker.running.load(Ordering::SeqCst) {
                     let keys = worker.generate_key();
                     for key in keys {
                         if worker.test(&key.address) {
@@ -64,7 +68,7 @@ impl VanityWorker for TronWorker {
             });
         }
     }
-    
+
     fn stop_generation(&self) {
         self.running.store(false, Ordering::SeqCst);
     }
