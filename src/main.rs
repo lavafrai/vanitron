@@ -1,5 +1,6 @@
 mod vanity;
 
+use std::thread;
 use crate::vanity::tron::tron_worker::TronWorker;
 use crate::vanity::vanity_worker::VanityWorker;
 use regex::RegexBuilder;
@@ -8,37 +9,28 @@ fn main() {
     let mut vanity_worker: Box<dyn VanityWorker> = Box::new(TronWorker::new(
         24,
         1,
-        ""
+        String::from(""),
+        11
     ));
 
     {
-        let regex = RegexBuilder::new(r".+va$")
+        let regex = RegexBuilder::new(r".+ava$")
             .case_insensitive(true)
             .build()
             .expect("Couldn't build regex");
-        vanity_worker.add_matcher(Box::new(move |s: &str| {
-            regex.is_match(s)
-        }));
+        vanity_worker.add_matcher(regex);
     }
 
     let start_time = std::time::Instant::now();
-    let mut done = false;
-    let mut tries = 0;
-    while !done {
-        let results = vanity_worker.generate_key();
-        for result in results {
-            if vanity_worker.test(result.address.as_str()) {
-                println!("Found matching address: {}", result.address);
-                println!("Mnemonic: {}", result.mnemonic);
-                println!("Derivation Path: {}", result.derivation_path);
-                done = true;
-                break;
-            } else {
-                println!("Generated address: {}", result.address);
-                tries += 1;
-            }
-        }
+
+    vanity_worker.start_generation();
+    let mut i = 0;
+    let mut found_wallets = false;
+    while !found_wallets {
+        
     }
+
+    let tries = vanity_worker.get_generated_wallets_count();
     let elapsed = start_time.elapsed();
     println!("Time elapsed: {:.2?}", elapsed);
     println!("Total tries: {}", tries);
