@@ -42,7 +42,7 @@ Vanity search is brute force. The longer and stricter the pattern, the slower it
 - Simplify your pattern / reduce the required prefix length / try to use [leet](https://en.wikipedia.org/wiki/Leet) to simplify the search.
 - Avoid limiting yourself to a single case.
 
-### Estimated time at ~3k addr/s (suffix)
+### Estimated time at ~3k addr/s
 For end‑anchored patterns like `...XYZ$` (matching the last k characters), the probability to match an exact k‑char suffix is `(1/58)^k` (case‑sensitive). For non‑anchored patterns (substring anywhere), we approximate the probability as `(L - k + 1) * (1/58)^k` where `L` is the address length. TRON Base58Check addresses are typically `L = 34` chars.
 
 Case‑insensitive (NC) matching increases the chance for alphabetic characters: if your suffix consists only of letters, probability per letter doubles, i.e. `(2/58)^k = (1/29)^k`. If the suffix includes digits, adjust per position accordingly (digits unaffected).
