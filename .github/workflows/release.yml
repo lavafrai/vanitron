@@ -1,0 +1,69 @@
+name: Publish release binaries
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.id }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-publish:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Test
+        run: cargo test --locked --target ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --locked --release --target ${{ matrix.target }}
+
+      - name: Prepare Unix binary
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          asset="vanitron-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/vanitron" "$asset"
+          echo "RELEASE_ASSET=$asset" >> "$GITHUB_ENV"
+
+      - name: Prepare Windows binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $asset = "vanitron-${{ matrix.target }}.exe"
+          Copy-Item "target/${{ matrix.target }}/release/vanitron.exe" $asset
+          "RELEASE_ASSET=$asset" >> $env:GITHUB_ENV
+
+      - name: Upload binary to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ env.RELEASE_ASSET }}" --clobber
