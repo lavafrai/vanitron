@@ -50,16 +50,22 @@ jobs:
       - name: Prepare Unix binary
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          asset="vanitron-${{ matrix.target }}"
+          safe_tag="${RELEASE_TAG//\//-}"
+          asset="vanitron-$safe_tag-${{ matrix.target }}"
           cp "target/${{ matrix.target }}/release/vanitron" "$asset"
           echo "RELEASE_ASSET=$asset" >> "$GITHUB_ENV"
 
       - name: Prepare Windows binary
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          $asset = "vanitron-${{ matrix.target }}.exe"
+          $safeTag = $env:RELEASE_TAG.Replace('/', '-')
+          $asset = "vanitron-$safeTag-${{ matrix.target }}.exe"
           Copy-Item "target/${{ matrix.target }}/release/vanitron.exe" $asset
           "RELEASE_ASSET=$asset" >> $env:GITHUB_ENV
 
