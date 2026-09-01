@@ -17,7 +17,7 @@ fn main() {
     let mut vanity_worker: Box<dyn VanityWorker> = Box::new(TronWorker::new(
         args.mnemonic_size.unwrap_or(24),
         1,
-        args.passphrase.unwrap_or(String::from("")),
+        args.passphrase.unwrap_or_default(),
         threads_count,
     ));
 

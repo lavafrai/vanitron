@@ -15,8 +15,28 @@ pub struct Args {
     #[arg(long, short = 'm', default_value = "24", help = "Mnemonic size in words")]
     pub mnemonic_size: Option<usize>,
 
-    #[arg(long, short = 'p', default_value = "<None>", help = "Passphrase for mnemonic generation")]
+    #[arg(long, short = 'p', help = "BIP-39 passphrase (optional)")]
     pub passphrase: Option<String>,
 
     pub pattern: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Args;
+    use clap::Parser;
+
+    #[test]
+    fn passphrase_is_absent_by_default() {
+        let args = Args::try_parse_from(["vanitron", "pattern"]).unwrap();
+
+        assert_eq!(args.passphrase, None);
+    }
+
+    #[test]
+    fn explicit_passphrase_is_preserved() {
+        let args = Args::try_parse_from(["vanitron", "--passphrase", "secret", "pattern"]).unwrap();
+
+        assert_eq!(args.passphrase.as_deref(), Some("secret"));
+    }
 }

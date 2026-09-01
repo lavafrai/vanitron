@@ -20,3 +20,27 @@ pub fn public_key_to_address(uncompressed_public_key: &[u8; 65]) -> String {
     final_address_bytes.extend_from_slice(checksum);
     bs58::encode(final_address_bytes).into_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::public_key_to_address;
+    use crate::vanity::tron::crypto::keys::{derivate_seed_to_private, private_key_to_public};
+    use crate::vanity::tron::crypto::mnemonic::mnemonic_to_seed;
+    use bip39::Mnemonic;
+
+    #[test]
+    fn derives_known_tron_address_with_empty_passphrase() {
+        let mnemonic = Mnemonic::parse(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        )
+        .unwrap();
+        let seed = mnemonic_to_seed(&mnemonic, "");
+        let private_key = derivate_seed_to_private(&seed, 0);
+        let public_key = private_key_to_public(&private_key);
+
+        assert_eq!(
+            public_key_to_address(&public_key),
+            "TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH"
+        );
+    }
+}
