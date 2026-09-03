@@ -44,6 +44,12 @@ jobs:
       - name: Test
         run: cargo test --locked --target ${{ matrix.target }}
 
+      - name: Test CPU-only fallback build
+        run: cargo test --locked --no-default-features --target ${{ matrix.target }}
+
+      - name: Build CPU-only fallback smoke
+        run: cargo build --locked --release --no-default-features --target ${{ matrix.target }}
+
       - name: Build
         run: cargo build --locked --release --target ${{ matrix.target }}
 

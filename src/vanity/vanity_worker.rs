@@ -1,8 +1,11 @@
 use crate::vanity::generated_key::KeyGenerationResult;
 use regex::Regex;
 
+#[allow(dead_code)]
 pub trait VanityWorker: Send + Sync + 'static {
-    fn new() -> Self where Self: Sized;
+    fn new() -> Self
+    where
+        Self: Sized;
     fn add_matcher(&mut self, f: Regex);
     fn clear_matchers(&mut self);
     fn has_wallets_found(&self) -> bool;

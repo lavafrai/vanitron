@@ -1,6 +1,6 @@
-use std::io::Write;
+use crate::cli::fmt::{fmt_duration, fmt_int, fmt_rate};
 use std::collections::VecDeque;
-use crate::cli::fmt::{fmt_int, fmt_rate, fmt_duration};
+use std::io::Write;
 
 pub struct ProgressBar {
     start_time: std::time::Instant,
@@ -21,7 +21,7 @@ impl ProgressBar {
             last_tries: 0,
             spinner_idx: 0,
             smoothed_cur: None,
-            alpha: 0.2, // коэффициент сглаживания (0..1)
+            alpha: 0.35,
             samples: VecDeque::with_capacity(600),
             window: std::time::Duration::from_secs(60),
         }
@@ -39,7 +39,11 @@ impl ProgressBar {
         self.samples.push_back((now, tries));
         let cutoff = now - self.window;
         while let Some((t, _)) = self.samples.front().copied() {
-            if t < cutoff { self.samples.pop_front(); } else { break; }
+            if t < cutoff {
+                self.samples.pop_front();
+            } else {
+                break;
+            }
         }
 
         let dt = self.last_tick.elapsed().as_secs_f64().max(1e-9);
@@ -58,19 +62,38 @@ impl ProgressBar {
             rate_last
         };
 
+        let short_cutoff = now - std::time::Duration::from_secs(3);
+        let (short_t, short_tries) = self
+            .samples
+            .iter()
+            .copied()
+            .find(|(time, _)| *time >= short_cutoff)
+            .unwrap_or((self.start_time, 0));
+        let short_elapsed = now.duration_since(short_t).as_secs_f64();
+        let short_rate = if short_elapsed > 0.0 {
+            tries.saturating_sub(short_tries) as f64 / short_elapsed
+        } else {
+            rate_last
+        };
         let smoothed_cur = match self.smoothed_cur {
-            Some(prev) => prev + self.alpha * (rate_last - prev),
-            None => rate_last,
+            Some(prev) => prev + self.alpha * (short_rate - prev),
+            None => short_rate,
         };
         self.smoothed_cur = Some(smoothed_cur);
 
         let trend = if rate_avg.is_finite() && rate_avg > 0.0 {
             let rel = (smoothed_cur - rate_avg) / rate_avg;
-            if rel > 0.05 { '↑' }
-            else if rel > 0.01 { '↗' }
-            else if rel < -0.05 { '↓' }
-            else if rel < -0.01 { '↘' }
-            else { '→' }
+            if rel > 0.05 {
+                '↑'
+            } else if rel > 0.01 {
+                '↗'
+            } else if rel < -0.05 {
+                '↓'
+            } else if rel < -0.01 {
+                '↘'
+            } else {
+                '→'
+            }
         } else if smoothed_cur.is_finite() && smoothed_cur > 0.0 {
             '↑'
         } else {
@@ -83,7 +106,7 @@ impl ProgressBar {
             fmt_int(tries),
             fmt_rate(rate_avg),
             trend,
-            fmt_rate(rate_last),
+            fmt_rate(smoothed_cur),
             fmt_duration(elapsed_total),
         );
 
@@ -103,8 +126,12 @@ impl ProgressBar {
             if dtw > 0.0 {
                 let dtr = self.last_tries.saturating_sub(old_tries) as f64;
                 dtr / dtw
-            } else { 0.0 }
-        } else { 0.0 };
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        };
 
         let line = format!(
             "⣿ Tries: {} | Average rate: {}/s | Elapsed: {}",

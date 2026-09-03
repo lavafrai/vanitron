@@ -21,6 +21,12 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             ext: ".exe"
+          - os: macos-14
+            target: aarch64-apple-darwin
+            ext: ""
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            ext: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -32,13 +38,22 @@ jobs:
           target: ${{ matrix.target }}
           override: true
 
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+      - name: Test default GPU-enabled build
+        run: cargo test --locked --target ${{ matrix.target }}
+
+      - name: Test CPU-only build
+        run: cargo test --locked --no-default-features --target ${{ matrix.target }}
+
+      - name: Build CPU-only
+        run: cargo build --locked --release --no-default-features --target ${{ matrix.target }}
+
+      - name: Build default GPU-enabled artifact
+        run: cargo build --locked --release --target ${{ matrix.target }}
         
       - name: Prepare artifact
         run: |
           mkdir artifacts
-          cp target/${{ matrix.target }}/release/vanitron artifacts/vanitron${{ matrix.ext }}
+          cp target/${{ matrix.target }}/release/vanitron${{ matrix.ext }} artifacts/vanitron${{ matrix.ext }}
         shell: bash
 
       - name: Upload artifact

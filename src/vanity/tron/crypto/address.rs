@@ -9,15 +9,17 @@ pub fn public_key_to_address(uncompressed_public_key: &[u8; 65]) -> String {
 
     let address_bytes = &hashed_public_key[hashed_public_key.len() - 20..];
     const TRON_ADDRESS_PREFIX: u8 = 0x41;
-    let mut address_with_prefix = vec![TRON_ADDRESS_PREFIX];
-    address_with_prefix.extend_from_slice(address_bytes);
+    let mut address_with_prefix = [0u8; 21];
+    address_with_prefix[0] = TRON_ADDRESS_PREFIX;
+    address_with_prefix[1..].copy_from_slice(address_bytes);
 
-    let h1 = Sha256::digest(&address_with_prefix);
-    let h2 = Sha256::digest(&h1);
+    let h1 = Sha256::digest(address_with_prefix);
+    let h2 = Sha256::digest(h1);
     let checksum = &h2[0..4];
 
-    let mut final_address_bytes = address_with_prefix;
-    final_address_bytes.extend_from_slice(checksum);
+    let mut final_address_bytes = [0u8; 25];
+    final_address_bytes[..21].copy_from_slice(&address_with_prefix);
+    final_address_bytes[21..].copy_from_slice(checksum);
     bs58::encode(final_address_bytes).into_string()
 }
 
@@ -35,8 +37,8 @@ mod tests {
         )
         .unwrap();
         let seed = mnemonic_to_seed(&mnemonic, "");
-        let private_key = derivate_seed_to_private(&seed, 0);
-        let public_key = private_key_to_public(&private_key);
+        let private_key = derivate_seed_to_private(&seed, 0).unwrap();
+        let public_key = private_key_to_public(&private_key).unwrap();
 
         assert_eq!(
             public_key_to_address(&public_key),

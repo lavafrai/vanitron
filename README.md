@@ -13,8 +13,12 @@ vanitron [flags] <pattern>
 
  -j, --threads <N>        Number of worker threads (default: all CPU cores minus one)
  -c, --case-sensitive     Enable case‑sensitive matching (default: off)
- -m, --mnemonic-size <N>  Mnemonic size in words (12 or 24; default: 24)
+ -m, --mnemonic-size <N>  Mnemonic size in words (12/15/18/21/24; default: 24)
  -p, --passphrase <STR>   BIP‑39 passphrase (optional)
+     --backend <MODE>      Compute backend: cpu, gpu, or hybrid (default: hybrid)
+     --adapter <GPU>       GPU adapter: auto, list index, or unique name (default: auto)
+     --gpu-batch-size <N>  Mnemonics per GPU batch (default: 16384)
+     --list-adapters       List GPU adapters and exit; no pattern is required
 
 <pattern> — a regular expression applied to the address string
 ```
@@ -39,10 +43,20 @@ No. A 24‑word mnemonic from a 2048‑word list yields 2048^24 (~2.9×10^79) co
 ## Speed
 Vanity search is brute force. The longer and stricter the pattern, the slower it gets.
 - Use more threads (`-j`), but not more than you have CPU cores.
+- The normal build includes the cross-platform GPU PBKDF2 backend. Use `--no-default-features` for a smaller CPU-only binary.
+- `--backend cpu` runs only independent CPU brute-force workers.
+- `--backend gpu` uses GPU PBKDF2 and CPU post-processing, without a separate CPU brute-force lane.
+- `--backend hybrid` runs the GPU PBKDF2 pipeline and independent CPU brute force simultaneously. It assigns roughly one quarter of the `--threads` budget to GPU post-processing and the rest to the independent CPU lane. GPU derivation of batch N+1 overlaps CPU checking of batch N, keeping both stages busy.
+- `--adapter auto` benchmarks compatible GPUs and selects the fastest adapter.
+- Use `--list-adapters` and `--adapter "GPU name"` (or its displayed index) to select one GPU manually. A manual selection still falls back to CPU if initialization or execution fails.
+- On Apple M4 Pro, controlled local release/LTO runs with 24-word mnemonics and an impossible `^Z` pattern produced median end-to-end rates of ~14.2k addr/s on `--backend cpu`, ~28.5k addr/s on `--backend gpu`, and ~37.0k addr/s on `--backend hybrid`.
+- With the default 13-thread budget, `--backend hybrid` keeps an independent CPU brute-force lane and the GPU PBKDF2 lane active at the same time. The displayed current rate uses a short rolling window, so completion of a 16,384-item GPU batch no longer appears as an artificial one-tick spike.
+- GPU-produced matches are verified again through the CPU seed derivation path before they are printed. If GPU initialization, execution, post-processing, or verification fails, the affected batch is replayed on CPU and the run continues without using GPU.
+- GPU acceleration currently supports an empty BIP‑39 passphrase. A non-empty `--passphrase` automatically uses CPU.
 - Simplify your pattern / reduce the required prefix length / try to use [leet](https://en.wikipedia.org/wiki/Leet) to simplify the search.
 - Avoid limiting yourself to a single case.
 
-### Estimated time at ~3k addr/s
+### Estimated time
 For end‑anchored patterns like `...XYZ$` (matching the last k characters), the probability to match an exact k‑char suffix is `(1/58)^k` (case‑sensitive). For non‑anchored patterns (substring anywhere), we approximate the probability as `(L - k + 1) * (1/58)^k` where `L` is the address length. TRON Base58Check addresses are typically `L = 34` chars.
 
 Case‑insensitive (NC) matching increases the chance for alphabetic characters: if your suffix consists only of letters, probability per letter doubles, i.e. `(2/58)^k = (1/29)^k`. If the suffix includes digits, adjust per position accordingly (digits unaffected).
@@ -53,17 +67,17 @@ Formulas (expected tries):
 - Anchored, NC (letters‑only): `29^k`
 - Non‑anchored, NC (letters‑only): `29^k / (L - k + 1)`
 
-Time ≈ tries / 3000 seconds (assuming ~3,000 addr/s).
+Time ≈ tries / your measured addr/s rate.
 
-Examples (avg @ 3k addr/s; L=34):
+Examples (avg @ 39k addr/s; L=34):
 
 | k | Anchored (CS) | Non‑anchored (CS) | Anchored (NC letters) | Non‑anchored (NC letters) |
 |---|---|---|---|---|
-| 1 | ~0.02 s | ~0.00057 s | ~0.0097 s | ~0.00028 s |
-| 2 | ~1.12 s | ~0.034 s   | ~0.28 s    | ~0.0085 s  |
-| 3 | ~1m 05s | ~2.03 s    | ~8.13 s    | ~0.254 s   |
-| 4 | ~1h 03m | ~2m 02s    | ~3m 56s    | ~7.61 s    |
-| 5 | ~2d 12h 46m | ~2h 01m 33s | ~1h 54m  | ~3m 48s    |
+| 1 | ~0.0015 s | ~0.000044 s | ~0.00074 s | ~0.000022 s |
+| 2 | ~0.086 s | ~0.0026 s | ~0.022 s | ~0.00065 s |
+| 3 | ~5.0 s | ~0.16 s | ~0.63 s | ~0.020 s |
+| 4 | ~4m 50s | ~9.4 s | ~18 s | ~0.59 s |
+| 5 | ~4h 40m | ~9m 21s | ~8m 46s | ~18 s |
 
 Notes:
 - NC columns assume all‑letter suffix; mix of letters/digits will be between CS and NC.
@@ -82,6 +96,11 @@ Import the mnemonic into a TRON‑compatible wallet (e.g., TronLink) using the T
 - Requires Rust (stable).
 - Run: `cargo run --release -- "PATTERN"`
 - Build: `cargo build --release`
+- GPU-enabled build: `cargo build --release` (default)
+- Hybrid run: `vanitron --backend hybrid "PATTERN"`
+- CPU-only build without wgpu: `cargo build --release --no-default-features`
+
+The GPU build uses Metal on macOS, Vulkan on Linux, and DX12 with statically linked DXC on Windows. It remains fully offline while searching; GPU discovery and execution do not make network requests.
 
 ## Donations
 If this project is helpful, consider supporting further development by any convenient means on my website: [lavafrai.ru](https://lavafrai.ru)

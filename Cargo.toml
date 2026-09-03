@@ -3,9 +3,18 @@ name = "vanitron"
 version = "1.0.1"
 edition = "2024"
 
+[features]
+default = ["gpu-pbkdf2"]
+gpu-pbkdf2 = [
+    "dep:bytemuck",
+    "dep:pollster",
+    "dep:rayon",
+    "dep:wgpu",
+]
+
 [dependencies]
 regex = "1.11"
-bip39 = { version = "2.2", features = ["rand"] }
+bip39 = { version = "2.2", features = ["rand", "zeroize"] }
 tiny-hderive = "0.3"
 secp256k1 = "0.31"
 sha3 = "0.10"
@@ -16,3 +25,12 @@ num_cpus = "1.17"
 anstream = "0.6"
 anstyle = "1.0"
 ctrlc = "3"
+bytemuck = { version = "1.23", optional = true }
+pollster = { version = "0.4", optional = true }
+rayon = { version = "1.11", optional = true }
+wgpu = { version = "30.0", optional = true, default-features = false, features = ["std", "parking_lot", "wgsl", "dx12", "metal", "vulkan", "static-dxc"] }
+zeroize = "1.8"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
